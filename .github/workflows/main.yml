@@ -1,1 +1,29 @@
-
+name: build
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Распаковать архив, если он загружен
+        run: |
+          for z in *.zip; do [ -f "$z" ] && unzip -qo "$z"; done || true
+      - name: Найти папку проекта
+        run: |
+          dir=$(dirname "$(find . -name build.gradle -not -path './.git/*' | head -n 1)")
+          echo "PROJECT_DIR=$dir" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.10.2
+      - run: gradle build --no-daemon
+        working-directory: ${{ env.PROJECT_DIR }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: petcommands-jar
+          path: ${{ env.PROJECT_DIR }}/build/libs/*.jar
